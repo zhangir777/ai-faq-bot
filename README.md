@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/zhangir777/ai-faq-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/zhangir777/ai-faq-bot/actions/workflows/ci.yml)
 
+**Hire me:** [Upwork](https://www.upwork.com/freelancers/~012c68804f9b4d4550) · [Fiverr](https://www.fiverr.com/akhmetov_zhangi) · [Telegram @ZhangirAkhmetov](https://t.me/ZhangirAkhmetov)
+
 A Telegram bot that answers customer questions 24/7 using your company's FAQ, then collects
 leads (name + phone) into Excel and sends them to managers.
 
