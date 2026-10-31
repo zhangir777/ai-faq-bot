@@ -32,16 +32,45 @@ from bot.ai import AIError, ask, build_messages, parse_reply, providers_from_env
 from bot.leads import normalize_phone, save_lead
 
 ROOT = Path(__file__).resolve().parent.parent
+CHOOSE_LANG = "Choose language / Выберите язык / Тілді таңдаңыз"
+LANGS = {"en": "🇬🇧 English", "ru": "🇷🇺 Русский", "kk": "🇰🇿 Қазақша"}
 TEXTS = {
-    "greeting": "Здравствуйте! Я AI-помощник студии красоты «Demo». Спросите что угодно "
-    "про услуги, цены, график или запись. Можно писать по-русски, қазақша или in English.",
-    "lead_button": "📝 Оставить заявку",
-    "ask_name": "Как вас зовут?",
-    "ask_phone": "Ваш номер телефона? Нажмите кнопку или напишите номер.",
-    "share_phone": "📱 Отправить номер",
-    "done": "Спасибо! Менеджер свяжется с вами в ближайшее время.",
-    "error": "Сейчас не могу ответить. Оставьте заявку, и менеджер ответит вам лично.",
-    "limit": "Слишком много сообщений. Попробуйте через час или оставьте заявку.",
+    "en": {
+        "greeting": "Hello! I'm the AI assistant of «Demo» beauty studio. Ask me anything about "
+        "services, prices, opening hours or booking.",
+        "lead_button": "📝 Leave a request",
+        "ask_name": "What is your name?",
+        "ask_phone": "Your phone number? Tap the button or type the number.",
+        "share_phone": "📱 Share phone number",
+        "done": "Thank you! A manager will contact you shortly.",
+        "error": "I can't answer right now. Leave a request and a manager will reply to you.",
+        "limit": "Too many messages. Try again in an hour or leave a request.",
+        "no_leads": "No leads yet.",
+    },
+    "ru": {
+        "greeting": "Здравствуйте! Я AI-помощник студии красоты «Demo». Спросите что угодно "
+        "про услуги, цены, график или запись.",
+        "lead_button": "📝 Оставить заявку",
+        "ask_name": "Как вас зовут?",
+        "ask_phone": "Ваш номер телефона? Нажмите кнопку или напишите номер.",
+        "share_phone": "📱 Отправить номер",
+        "done": "Спасибо! Менеджер свяжется с вами в ближайшее время.",
+        "error": "Сейчас не могу ответить. Оставьте заявку, и менеджер ответит вам лично.",
+        "limit": "Слишком много сообщений. Попробуйте через час или оставьте заявку.",
+        "no_leads": "Заявок пока нет.",
+    },
+    "kk": {
+        "greeting": "Сәлеметсіз бе! Мен «Demo» сұлулық студиясының AI-көмекшісімін. Қызметтер, "
+        "бағалар, жұмыс уақыты немесе жазылу туралы сұраңыз.",
+        "lead_button": "📝 Өтінім қалдыру",
+        "ask_name": "Атыңыз кім?",
+        "ask_phone": "Телефон нөміріңіз? Батырманы басыңыз немесе нөмірді жазыңыз.",
+        "share_phone": "📱 Нөмірді жіберу",
+        "done": "Рақмет! Менеджер жақын арада сізбен хабарласады.",
+        "error": "Қазір жауап бере алмаймын. Өтінім қалдырыңыз, менеджер сізге өзі жауап береді.",
+        "limit": "Хабарлама тым көп. Бір сағаттан кейін қайталаңыз немесе өтінім қалдырыңыз.",
+        "no_leads": "Әзірге өтінім жоқ.",
+    },
 }
 HISTORY_SIZE = 6  # last messages sent to the model as context
 RATE_LIMIT = 30  # questions per user per hour, protects the free API quota
@@ -49,6 +78,7 @@ RATE_LIMIT = 30  # questions per user per hour, protects the free API quota
 router = Router()
 history: dict[int, deque] = defaultdict(lambda: deque(maxlen=HISTORY_SIZE))
 requests_log: dict[int, deque] = defaultdict(deque)
+langs: dict[int, str] = {}  # chosen language per user, in memory
 
 
 class Lead(StatesGroup):
@@ -56,9 +86,22 @@ class Lead(StatesGroup):
     phone = State()
 
 
-def lead_kb():
+def t(user, key: str) -> str:
+    """Text in the user's language: chosen in /start, else from Telegram settings, else English."""
+    lang = langs.get(user.id) or (user.language_code or "")[:2]
+    return TEXTS.get(lang, TEXTS["en"])[key]
+
+
+def lead_kb(user):
     kb = InlineKeyboardBuilder()
-    kb.button(text=TEXTS["lead_button"], callback_data="lead")
+    kb.button(text=t(user, "lead_button"), callback_data="lead")
+    return kb.as_markup()
+
+
+def lang_kb():
+    kb = InlineKeyboardBuilder()
+    for code, name in LANGS.items():
+        kb.button(text=name, callback_data=f"lang:{code}")
     return kb.as_markup()
 
 
@@ -81,7 +124,16 @@ def last_questions(user_id: int) -> str:
 async def start(message: Message, state: FSMContext):
     await state.clear()
     history.pop(message.from_user.id, None)
-    await message.answer(TEXTS["greeting"], reply_markup=lead_kb())
+    await message.answer(CHOOSE_LANG, reply_markup=lang_kb())
+
+
+@router.callback_query(F.data.startswith("lang:"))
+async def set_lang(call: CallbackQuery):
+    lang = call.data.split(":", 1)[1]
+    if lang in TEXTS:
+        langs[call.from_user.id] = lang
+    await call.message.answer(t(call.from_user, "greeting"), reply_markup=lead_kb(call.from_user))
+    await call.answer()
 
 
 @router.message(Command("leads"))
@@ -89,20 +141,20 @@ async def send_leads(message: Message, admin_ids: list[int], leads_path: Path):
     if message.from_user.id not in admin_ids:
         return
     if not leads_path.exists():
-        return await message.answer("Заявок пока нет.")
+        return await message.answer(t(message.from_user, "no_leads"))
     await message.answer_document(FSInputFile(leads_path))
 
 
 @router.message(Command("lead"))
 async def lead_command(message: Message, state: FSMContext):
     await state.set_state(Lead.name)
-    await message.answer(TEXTS["ask_name"])
+    await message.answer(t(message.from_user, "ask_name"))
 
 
 @router.callback_query(F.data == "lead")
 async def lead_start(call: CallbackQuery, state: FSMContext):
     await state.set_state(Lead.name)
-    await call.message.answer(TEXTS["ask_name"])
+    await call.message.answer(t(call.from_user, "ask_name"))
     await call.answer()
 
 
@@ -111,11 +163,11 @@ async def lead_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text[:100])
     await state.set_state(Lead.phone)
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=TEXTS["share_phone"], request_contact=True)]],
+        keyboard=[[KeyboardButton(text=t(message.from_user, "share_phone"), request_contact=True)]],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
-    await message.answer(TEXTS["ask_phone"], reply_markup=kb)
+    await message.answer(t(message.from_user, "ask_phone"), reply_markup=kb)
 
 
 @router.message(Lead.phone)
@@ -125,7 +177,7 @@ async def lead_phone(
     raw = message.contact.phone_number if message.contact else (message.text or "")
     phone = normalize_phone(raw)
     if not phone:
-        return await message.answer(TEXTS["ask_phone"])
+        return await message.answer(t(message.from_user, "ask_phone"))
     data = await state.get_data()
     await state.clear()
     user = message.from_user
@@ -137,7 +189,7 @@ async def lead_phone(
     )
     for admin_id in admin_ids:
         await bot.send_message(admin_id, text, parse_mode=None)
-    await message.answer(TEXTS["done"], reply_markup=ReplyKeyboardRemove())
+    await message.answer(t(message.from_user, "done"), reply_markup=ReplyKeyboardRemove())
 
 
 @router.message(F.text)
@@ -150,18 +202,24 @@ async def question(
 ):
     user_id = message.from_user.id
     if not allowed(user_id):
-        return await message.answer(TEXTS["limit"], reply_markup=lead_kb())
+        return await message.answer(
+            t(message.from_user, "limit"), reply_markup=lead_kb(message.from_user)
+        )
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     text = message.text[:1000]
     try:
         raw = await ask(session, providers, build_messages(knowledge, list(history[user_id]), text))
     except AIError:
-        return await message.answer(TEXTS["error"], reply_markup=lead_kb())
+        return await message.answer(
+            t(message.from_user, "error"), reply_markup=lead_kb(message.from_user)
+        )
     answer, wants_lead = parse_reply(raw)
     history[user_id].extend(
         [{"role": "user", "content": text}, {"role": "assistant", "content": answer}]
     )
-    await message.answer(answer, parse_mode=None, reply_markup=lead_kb() if wants_lead else None)
+    await message.answer(
+        answer, parse_mode=None, reply_markup=lead_kb(message.from_user) if wants_lead else None
+    )
 
 
 def admin_ids_from_env() -> list[int]:

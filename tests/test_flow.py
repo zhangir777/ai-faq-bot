@@ -65,6 +65,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(main.router, "_parent_router", None)  # router is a module singleton
     main.history.clear()
     main.requests_log.clear()
+    main.langs.clear()
     session = FakeSession()
     bot = Bot("42:TEST", session=session)
     dp = Dispatcher()
@@ -93,16 +94,16 @@ async def test_question_then_lead_saved_and_admin_notified(env):
     assert sent[0].reply_markup.inline_keyboard[0][0].callback_data == "lead"
 
     sent = await feed(cb("lead"))
-    assert sent[0].text == main.TEXTS["ask_name"]
+    assert sent[0].text == main.TEXTS["en"]["ask_name"]
     await feed(msg("Айгуль"))
     sent = await feed(msg("12345"))  # bad phone -> asked again
-    assert sent[0].text == main.TEXTS["ask_phone"]
+    assert sent[0].text == main.TEXTS["en"]["ask_phone"]
     contact = Contact(phone_number="87771234567", first_name="A", user_id=USER.id)
     sent = await feed(msg(contact=contact))
 
     admin = [m for m in sent if m.chat_id == ADMIN][0]
     assert "+77771234567" in admin.text and "маникюр" in admin.text
-    assert sent[-1].text == main.TEXTS["done"]
+    assert sent[-1].text == main.TEXTS["en"]["done"]
     row = list(load_workbook(leads).active.values)[1]
     assert row[1:4] == ("Айгуль", "+77771234567", "Хочу на маникюр завтра")
 
@@ -126,7 +127,7 @@ async def test_ai_error_offers_lead(env):
 
     monkeypatch.setattr(main, "ask", broken)
     sent = await feed(msg("?"))
-    assert sent[0].text == main.TEXTS["error"]
+    assert sent[0].text == main.TEXTS["en"]["error"]
 
 
 async def test_rate_limit(env):
@@ -140,7 +141,7 @@ async def test_rate_limit(env):
     await feed(msg("1"))
     await feed(msg("2"))
     sent = await feed(msg("3"))
-    assert sent[0].text == main.TEXTS["limit"]
+    assert sent[0].text == main.TEXTS["en"]["limit"]
 
 
 async def test_leads_command_only_for_admin(env):
@@ -148,4 +149,14 @@ async def test_leads_command_only_for_admin(env):
     assert await feed(msg("/leads")) == []
     admin = TgUser(id=ADMIN, is_bot=False, first_name="Admin")
     sent = await feed(msg("/leads", user=admin))
-    assert sent[0].text == "Заявок пока нет."
+    assert sent[0].text == main.TEXTS["en"]["no_leads"]
+
+
+async def test_start_asks_language_then_greets_in_it(env):
+    feed, _, _ = env
+    sent = await feed(msg("/start"))
+    langs = [b.callback_data for b in sent[0].reply_markup.inline_keyboard[0]]
+    assert langs == ["lang:en", "lang:ru", "lang:kk"]
+    sent = await feed(cb("lang:kk"))
+    assert sent[0].text == main.TEXTS["kk"]["greeting"]
+    assert sent[0].reply_markup.inline_keyboard[0][0].text == main.TEXTS["kk"]["lead_button"]
