@@ -1,32 +1,32 @@
-# Студия красоты «Demo» (демо-данные, замените на данные клиента)
+# «Demo» beauty studio (demo data, replace with the client's info)
 
-## Контакты и график
-- Адрес: г. Алматы, пр. Абая 10, 2 этаж (ориентир: ТЦ «Демо»).
-- График: ежедневно 10:00–21:00, без выходных.
-- Телефон / WhatsApp: +7 700 000 00 00.
-- Парковка: бесплатная, во дворе.
+## Contacts and hours
+- Address: 10 Abay Ave, 2nd floor, Almaty (landmark: «Demo» mall).
+- Hours: every day 10:00–21:00, no days off.
+- Phone / WhatsApp: +7 700 000 00 00.
+- Parking: free, in the courtyard.
 
-## Услуги и цены
-- Женская стрижка: от 6 000 ₸ (60 мин).
-- Мужская стрижка: 4 000 ₸ (40 мин).
-- Окрашивание: от 15 000 ₸, зависит от длины волос.
-- Маникюр с покрытием гель-лак: 7 000 ₸ (90 мин).
-- Педикюр с покрытием: 9 000 ₸ (90 мин).
-- Брови (коррекция + окрашивание): 4 500 ₸.
+## Services and prices
+- Women's haircut: from 6,000 ₸ (60 min).
+- Men's haircut: 4,000 ₸ (40 min).
+- Hair coloring: from 15,000 ₸, depends on hair length.
+- Gel polish manicure: 7,000 ₸ (90 min).
+- Pedicure with polish: 9,000 ₸ (90 min).
+- Brows (shaping + tinting): 4,500 ₸.
 
-## Оплата
-- Наличные, Kaspi QR, Kaspi Red, карты.
-- Предоплата не нужна.
+## Payment
+- Cash, Kaspi QR, Kaspi Red, cards.
+- No prepayment needed.
 
-## Запись и отмена
-- Записаться можно через этого бота (кнопка «Оставить заявку»), по телефону или в WhatsApp.
-- Отменить или перенести запись можно бесплатно за 3 часа до визита.
+## Booking and cancellation
+- Book through this bot ("Leave a request" button), by phone or WhatsApp.
+- Free cancellation or rescheduling up to 3 hours before the visit.
 
-## Акции
-- Скидка 10% на первое посещение.
-- Каждая 6-я стрижка бесплатно.
+## Offers
+- 10% off your first visit.
+- Every 6th haircut is free.
 
-## Мастера
-- Айгерим: стрижки и окрашивание, стаж 8 лет.
-- Дана: маникюр и педикюр, стаж 5 лет.
-- Мадина: брови и окрашивание, стаж 4 года.
+## Masters
+- Aigerim: haircuts and coloring, 8 years of experience.
+- Dana: manicure and pedicure, 5 years of experience.
+- Madina: brows and coloring, 4 years of experience.

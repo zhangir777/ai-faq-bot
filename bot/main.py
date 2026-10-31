@@ -87,9 +87,8 @@ class Lead(StatesGroup):
 
 
 def t(user, key: str) -> str:
-    """Text in the user's language: chosen in /start, else from Telegram settings, else English."""
-    lang = langs.get(user.id) or (user.language_code or "")[:2]
-    return TEXTS.get(lang, TEXTS["en"])[key]
+    """Text in the language chosen in /start, English by default."""
+    return TEXTS[langs.get(user.id, "en")][key]
 
 
 def lead_kb(user):
