@@ -1,0 +1,32 @@
+[project]
+name = "ai-faq-bot"
+version = "1.0.0"
+description = "AI Telegram bot that answers customer questions from a company FAQ and collects leads (aiogram 3, Groq/Gemini free API)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.31",
+    "openpyxl>=3.1",
+    "python-dotenv>=1.2.4",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.1", "pytest-asyncio>=1.4", "ruff>=0.17"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bot"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

@@ -1,0 +1,8 @@
+services:
+  bot:
+    build: .
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+      - ./knowledge.md:/app/knowledge.md:ro
+    restart: unless-stopped
