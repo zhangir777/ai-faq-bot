@@ -98,7 +98,7 @@ async def test_question_then_lead_saved_and_admin_notified(env):
     await feed(msg("Айгуль"))
     sent = await feed(msg("12345"))  # bad phone -> asked again
     assert sent[0].text == main.TEXTS["en"]["ask_phone"]
-    contact = Contact(phone_number="87771234567", first_name="A", user_id=USER.id)
+    contact = Contact(phone_number="77771234567", first_name="A", user_id=USER.id)  # no "+"
     sent = await feed(msg(contact=contact))
 
     admin = [m for m in sent if m.chat_id == ADMIN][0]
@@ -160,3 +160,17 @@ async def test_start_asks_language_then_greets_in_it(env):
     sent = await feed(cb("lang:kk"))
     assert sent[0].text == main.TEXTS["kk"]["greeting"]
     assert sent[0].reply_markup.inline_keyboard[0][0].text == main.TEXTS["kk"]["lead_button"]
+
+
+async def test_foreign_phone_and_start_hides_phone_keyboard(env):
+    feed, leads, _ = env
+    await feed(cb("lead"))
+    await feed(msg("John"))
+    sent = await feed(msg("/start"))  # left the lead form -> contact keyboard removed
+    assert type(sent[0].reply_markup).__name__ == "ReplyKeyboardRemove"
+
+    await feed(cb("lead"))
+    await feed(msg("John"))
+    sent = await feed(msg("+1 (415) 555-0100"))
+    assert sent[-1].text == main.TEXTS["en"]["done"]
+    assert list(load_workbook(leads).active.values)[1][2] == "+14155550100"

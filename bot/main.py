@@ -121,6 +121,9 @@ def last_questions(user_id: int) -> str:
 
 @router.message(CommandStart())
 async def start(message: Message, state: FSMContext):
+    if await state.get_state() == Lead.phone.state:  # hide the "Share phone" keyboard
+        tmp = await message.answer("…", reply_markup=ReplyKeyboardRemove())
+        await message.bot.delete_message(message.chat.id, tmp.message_id)
     await state.clear()
     history.pop(message.from_user.id, None)
     await message.answer(CHOOSE_LANG, reply_markup=lang_kb())
@@ -173,8 +176,10 @@ async def lead_name(message: Message, state: FSMContext):
 async def lead_phone(
     message: Message, state: FSMContext, bot: Bot, admin_ids: list[int], leads_path: Path
 ):
-    raw = message.contact.phone_number if message.contact else (message.text or "")
-    phone = normalize_phone(raw)
+    if message.contact:  # Telegram sends the full international number, "+" is optional
+        phone = "+" + re.sub(r"\D", "", message.contact.phone_number)
+    else:
+        phone = normalize_phone(message.text or "")
     if not phone:
         return await message.answer(t(message.from_user, "ask_phone"))
     data = await state.get_data()

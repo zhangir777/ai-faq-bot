@@ -12,8 +12,10 @@ WIDTHS = [18, 20, 16, 60, 18, 14]
 
 
 def normalize_phone(raw: str) -> str | None:
-    """+7XXXXXXXXXX for KZ/RU numbers written as 8..., +7..., 7..., with spaces/brackets."""
+    """+digits for international numbers (+1 415 ...); KZ/RU 8..., 7..., 10 digits -> +7..."""
     digits = re.sub(r"\D", "", raw)
+    if raw.strip().startswith("+"):
+        return "+" + digits if 10 <= len(digits) <= 15 else None
     if len(digits) == 11 and digits[0] in "78":
         return "+7" + digits[1:]
     if len(digits) == 10:
