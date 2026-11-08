@@ -108,6 +108,30 @@ async def test_question_then_lead_saved_and_admin_notified(env):
     assert row[1:4] == ("Айгуль", "+77771234567", "Хочу на маникюр завтра")
 
 
+async def test_book_intent_starts_lead_flow_directly(env):
+    feed, leads, monkeypatch = env
+
+    async def fake_ask(session, providers, messages):
+        return "Сейчас возьму ваши данные для записи. [BOOK]"
+
+    monkeypatch.setattr(main, "ask", fake_ask)
+    sent = await feed(msg("Запишите на маникюр завтра в 15:00"))
+    assert [m.text for m in sent] == [
+        "Сейчас возьму ваши данные для записи.",
+        main.TEXTS["en"]["ask_name"],
+    ]
+    assert sent[0].reply_markup is None
+
+    sent = await feed(msg("Алия"))
+    assert sent[0].text == main.TEXTS["en"]["ask_phone"]
+    sent = await feed(msg("+7 777 000 11 22"))
+    admin = [m for m in sent if m.chat_id == ADMIN][0]
+    assert "+77770001122" in admin.text and "15:00" in admin.text
+    assert sent[-1].text == main.TEXTS["en"]["done"]
+    row = list(load_workbook(leads).active.values)[1]
+    assert row[1:4] == ("Алия", "+77770001122", "Запишите на маникюр завтра в 15:00")
+
+
 async def test_answer_without_lead_tag_has_no_button(env):
     feed, _, monkeypatch = env
 

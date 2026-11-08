@@ -5,8 +5,9 @@ from bot.ai import AIError, Provider, ask, build_messages, parse_reply, provider
 
 
 def test_parse_reply_strips_tag_and_think():
-    assert parse_reply("<think>hmm</think>Маникюр 7 000 ₸. [LEAD]") == ("Маникюр 7 000 ₸.", True)
-    assert parse_reply("Мы работаем 10–21.") == ("Мы работаем 10–21.", False)
+    assert parse_reply("<think>hmm</think>Маникюр 7 000 ₸. [LEAD]") == ("Маникюр 7 000 ₸.", "lead")
+    assert parse_reply("Сейчас запишу вас. [BOOK]") == ("Сейчас запишу вас.", "book")
+    assert parse_reply("Мы работаем 10–21.") == ("Мы работаем 10–21.", None)
 
 
 def test_build_messages_puts_knowledge_in_system_and_question_last():

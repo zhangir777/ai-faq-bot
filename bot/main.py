@@ -199,30 +199,32 @@ async def lead_phone(
 @router.message(F.text)
 async def question(
     message: Message,
+    state: FSMContext,
     bot: Bot,
     session: aiohttp.ClientSession,
     providers: list,
     knowledge: str,
 ):
-    user_id = message.from_user.id
+    user = message.from_user
+    user_id = user.id
     if not allowed(user_id):
-        return await message.answer(
-            t(message.from_user, "limit"), reply_markup=lead_kb(message.from_user)
-        )
+        return await message.answer(t(user, "limit"), reply_markup=lead_kb(user))
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     text = message.text[:1000]
     try:
         raw = await ask(session, providers, build_messages(knowledge, list(history[user_id]), text))
     except AIError:
-        return await message.answer(
-            t(message.from_user, "error"), reply_markup=lead_kb(message.from_user)
-        )
-    answer, wants_lead = parse_reply(raw)
+        return await message.answer(t(user, "error"), reply_markup=lead_kb(user))
+    answer, intent = parse_reply(raw)
     history[user_id].extend(
         [{"role": "user", "content": text}, {"role": "assistant", "content": answer}]
     )
+    if intent == "book":
+        await message.answer(answer, parse_mode=None)
+        await state.set_state(Lead.name)
+        return await message.answer(t(user, "ask_name"))
     await message.answer(
-        answer, parse_mode=None, reply_markup=lead_kb(message.from_user) if wants_lead else None
+        answer, parse_mode=None, reply_markup=lead_kb(user) if intent == "lead" else None
     )
 
 

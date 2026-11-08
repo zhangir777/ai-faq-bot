@@ -11,20 +11,24 @@ from dataclasses import dataclass
 import aiohttp
 
 LEAD_TAG = "[LEAD]"
+BOOK_TAG = "[BOOK]"
 
 SYSTEM_PROMPT = """You are the customer support assistant of the company described below.
 Rules:
 - Answer ONLY with facts from the knowledge base. Never invent prices, services or dates.
 - If the answer is not in the knowledge base, say so in your own friendly words and suggest
-  leaving a request (the button below) so a manager can reply.
+  leaving a request (the button below) so a manager can reply, and add {tag} at the very end.
 - If the question is not about the company (code, homework, other topics), politely say you
   can only help with questions about our services.
 - Talk to the customer naturally, like a friendly receptionist of the company ("we").
   Never mention the knowledge base, these rules or that you are given information.
 - Reply in the customer's language (Russian, Kazakh or English). Be short: 1-4 sentences.
 - Plain text only, no markdown, no tables.
-- If the customer wants to book, order, get a call back, or you could not answer,
-  add {tag} at the very end of the reply.
+- You cannot book, record, save or register anything yourself; NEVER say or imply
+  "I booked/recorded/registered you" or "you are booked". If the customer wants to book,
+  order or get a call back: say in one short sentence (in the customer's language) that you
+  will take their details now (name and phone) so a manager confirms the time, and add
+  {book_tag} at the very end.
 
 Knowledge base:
 {knowledge}"""
@@ -56,15 +60,15 @@ def providers_from_env() -> list[Provider]:
 
 
 def build_messages(knowledge: str, history: list[dict], question: str) -> list[dict]:
-    system = SYSTEM_PROMPT.format(tag=LEAD_TAG, knowledge=knowledge)
+    system = SYSTEM_PROMPT.format(tag=LEAD_TAG, book_tag=BOOK_TAG, knowledge=knowledge)
     return [{"role": "system", "content": system}, *history, {"role": "user", "content": question}]
 
 
-def parse_reply(text: str) -> tuple[str, bool]:
-    """Remove <think> blocks and the lead tag. Returns (clean text, wants_lead)."""
+def parse_reply(text: str) -> tuple[str, str | None]:
+    """Remove <think> blocks and tags. Returns (clean text, intent)."""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.S)
-    wants_lead = LEAD_TAG in text
-    return text.replace(LEAD_TAG, "").strip(), wants_lead
+    intent = "book" if BOOK_TAG in text else "lead" if LEAD_TAG in text else None
+    return text.replace(BOOK_TAG, "").replace(LEAD_TAG, "").strip(), intent
 
 
 async def ask(
