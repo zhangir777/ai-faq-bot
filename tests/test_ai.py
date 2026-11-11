@@ -1,7 +1,15 @@
 import pytest
 from aiohttp import ClientSession, web
 
-from bot.ai import AIError, Provider, ask, build_messages, parse_reply, providers_from_env
+from bot.ai import (
+    AIError,
+    Provider,
+    ask,
+    build_messages,
+    knowledge_for,
+    parse_reply,
+    providers_from_env,
+)
 
 
 def test_parse_reply_strips_tag_and_think():
@@ -66,3 +74,10 @@ async def test_ask_raises_when_all_fail(fake_api):
     async with ClientSession() as session:
         with pytest.raises(AIError):
             await ask(session, [Provider("a", f"{fake_api}/fail", "k", "m")], [])
+
+
+def test_knowledge_lines_are_filtered_by_language():
+    kb = "- [en] Cards\n- [ru,kk] Kaspi QR\n- Cash"
+    assert knowledge_for(kb, "en") == "- Cards\n- Cash"
+    assert knowledge_for(kb, "ru") == "- Kaspi QR\n- Cash"
+    assert "Kaspi" not in build_messages(kb, [], "q", "en")[0]["content"]

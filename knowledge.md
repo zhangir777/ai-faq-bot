@@ -15,7 +15,8 @@
 - Brows (shaping + tinting): 4,500 ₸.
 
 ## Payment
-- Cash, Kaspi QR, Kaspi Red, cards.
+- [en] Cash, bank cards (Visa, Mastercard), Apple Pay and Google Pay.
+- [ru,kk] Cash, Kaspi QR, Kaspi Red, cards.
 - No prepayment needed.
 
 ## Booking and cancellation

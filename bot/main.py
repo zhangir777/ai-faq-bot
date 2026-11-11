@@ -46,6 +46,8 @@ TEXTS = {
         "error": "I can't answer right now. Leave a request and a manager will reply to you.",
         "limit": "Too many messages. Try again in an hour or leave a request.",
         "no_leads": "No leads yet.",
+        "admin_lead": "📝 New request\nName: {name}\nPhone: {phone}\n"
+        "Question: {question}\nTelegram: {tg} (id {id})",
     },
     "ru": {
         "greeting": "Здравствуйте! Я AI-помощник студии красоты «Demo». Спросите что угодно "
@@ -58,6 +60,8 @@ TEXTS = {
         "error": "Сейчас не могу ответить. Оставьте заявку, и менеджер ответит вам лично.",
         "limit": "Слишком много сообщений. Попробуйте через час или оставьте заявку.",
         "no_leads": "Заявок пока нет.",
+        "admin_lead": "📝 Новая заявка\nИмя: {name}\nТелефон: {phone}\n"
+        "Вопрос: {question}\nTelegram: {tg} (id {id})",
     },
     "kk": {
         "greeting": "Сәлеметсіз бе! Мен «Demo» сұлулық студиясының AI-көмекшісімін. Қызметтер, "
@@ -70,6 +74,8 @@ TEXTS = {
         "error": "Қазір жауап бере алмаймын. Өтінім қалдырыңыз, менеджер сізге өзі жауап береді.",
         "limit": "Хабарлама тым көп. Бір сағаттан кейін қайталаңыз немесе өтінім қалдырыңыз.",
         "no_leads": "Әзірге өтінім жоқ.",
+        "admin_lead": "📝 Жаңа өтінім\nАты: {name}\nТелефон: {phone}\n"
+        "Сұрақ: {question}\nTelegram: {tg} (id {id})",
     },
 }
 HISTORY_SIZE = 6  # last messages sent to the model as context
@@ -187,9 +193,8 @@ async def lead_phone(
     user = message.from_user
     question = last_questions(user.id) or "-"
     save_lead(leads_path, data["name"], phone, question, user.username or "", user.id)
-    text = (
-        f"📝 New lead\nName: {data['name']}\nPhone: {phone}\n"
-        f"Question: {question}\nTelegram: @{user.username or '-'} (id {user.id})"
+    text = t(user, "admin_lead").format(
+        name=data["name"], phone=phone, question=question, tg=f"@{user.username or '-'}", id=user.id
     )
     for admin_id in admin_ids:
         await bot.send_message(admin_id, text, parse_mode=None)
@@ -212,7 +217,8 @@ async def question(
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     text = message.text[:1000]
     try:
-        raw = await ask(session, providers, build_messages(knowledge, list(history[user_id]), text))
+        messages = build_messages(knowledge, list(history[user_id]), text, langs.get(user_id, "en"))
+        raw = await ask(session, providers, messages)
     except AIError:
         return await message.answer(t(user, "error"), reply_markup=lead_kb(user))
     answer, intent = parse_reply(raw)

@@ -59,8 +59,29 @@ def providers_from_env() -> list[Provider]:
     return result
 
 
-def build_messages(knowledge: str, history: list[dict], question: str) -> list[dict]:
-    system = SYSTEM_PROMPT.format(tag=LEAD_TAG, book_tag=BOOK_TAG, knowledge=knowledge)
+LANG_NAMES = {"en": "English", "ru": "Russian", "kk": "Kazakh"}
+
+
+def knowledge_for(knowledge: str, lang: str | None) -> str:
+    """Lines starting with [ru,kk] (or [en]) are kept only for those languages; tag removed."""
+    out = []
+    for line in knowledge.splitlines():
+        m = re.match(r"^(\s*-?\s*)\[([a-z,]+)\]\s*(.*)$", line)
+        if not m:
+            out.append(line)
+        elif lang is None or lang in m.group(2).split(","):
+            out.append(m.group(1) + m.group(3))
+    return "\n".join(out)
+
+
+def build_messages(
+    knowledge: str, history: list[dict], question: str, lang: str | None = None
+) -> list[dict]:
+    system = SYSTEM_PROMPT.format(
+        tag=LEAD_TAG, book_tag=BOOK_TAG, knowledge=knowledge_for(knowledge, lang)
+    )
+    if lang in LANG_NAMES:
+        system += f"\n\nThe customer chose {LANG_NAMES[lang]}: always reply in {LANG_NAMES[lang]}."
     return [{"role": "system", "content": system}, *history, {"role": "user", "content": question}]
 
 
